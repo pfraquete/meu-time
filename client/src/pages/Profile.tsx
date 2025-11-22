@@ -9,8 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { User, Trophy, Calendar } from 'lucide-react';
+import { User, Trophy, Calendar, Award } from 'lucide-react';
 import AvatarUpload from '@/components/AvatarUpload';
+import UserXPCard from '@/components/UserXPCard';
+import BadgesList from '@/components/BadgesList';
 
 interface PlayerStats {
   sport_name: string;
@@ -88,7 +90,7 @@ export default function Profile() {
   return (
     <div className="container max-w-4xl py-8">
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Perfil
@@ -96,6 +98,10 @@ export default function Profile() {
           <TabsTrigger value="stats">
             <Trophy className="h-4 w-4 mr-2" />
             Estatísticas
+          </TabsTrigger>
+          <TabsTrigger value="gamification">
+            <Award className="h-4 w-4 mr-2" />
+            Gamificação
           </TabsTrigger>
         </TabsList>
 
@@ -250,6 +256,14 @@ export default function Profile() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="gamification" className="space-y-6">
+          {/* XP e Nível */}
+          {user && <UserXPCard userId={user.id} />}
+
+          {/* Badges */}
+          {user && <BadgesList userId={user.id} />}
         </TabsContent>
       </Tabs>
     </div>

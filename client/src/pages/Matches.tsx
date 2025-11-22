@@ -50,143 +50,7 @@ export default function Matches() {
     error,
   } = useMatchFilters();
 
-  useEffect(() => {
-    fetchSports();
-    fetchMatches();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [matches, filters]);
-
-  const fetchSports = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sports')
-        .select('id, name, icon')
-        .order('name');
-
-      if (error) throw error;
-      setSports(data || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar esportes:', error);
-    }
-  };
-
-  const fetchMatches = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('matches')
-        .select(`
-          *,
-          sport:sports(id, name, icon),
-          venue:venues(name, city, state),
-          organizer:profiles!organizer_id(name)
-        `)
-        .eq('status', 'open')
-        .gte('match_date', new Date().toISOString())
-        .order('match_date', { ascending: true });
-
-      if (error) throw error;
-      setMatches(data || []);
-    } catch (error: any) {
-      toast.error('Erro ao carregar partidas');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = () => {
-    let filtered = [...matches];
-
-    // Filtro por esporte
-    if (filters.sportId !== 'all') {
-      filtered = filtered.filter(match => match.sport.id === filters.sportId);
-    }
-
-    // Filtro por nível de habilidade
-    if (filters.skillLevel !== 'all') {
-      filtered = filtered.filter(match => match.skill_level === filters.skillLevel);
-    }
-
-    // Filtro por preço
-    if (filters.priceRange !== 'all') {
-      filtered = filtered.filter(match => {
-        const price = match.price;
-        switch (filters.priceRange) {
-          case 'free':
-            return price === 0;
-          case '0-50':
-            return price > 0 && price <= 50;
-          case '50-100':
-            return price > 50 && price <= 100;
-          case '100+':
-            return price > 100;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filtro por data
-    if (filters.dateRange !== 'all') {
-      const now = new Date();
-      filtered = filtered.filter(match => {
-        const matchDate = new Date(match.match_date);
-        switch (filters.dateRange) {
-          case 'today':
-            return matchDate >= startOfDay(now) && matchDate <= endOfDay(now);
-          case 'tomorrow':
-            const tomorrow = addDays(now, 1);
-            return matchDate >= startOfDay(tomorrow) && matchDate <= endOfDay(tomorrow);
-          case 'this-week':
-            return matchDate >= startOfWeek(now, { locale: ptBR }) &&
-                   matchDate <= endOfWeek(now, { locale: ptBR });
-          case 'next-week':
-            const nextWeekStart = addWeeks(startOfWeek(now, { locale: ptBR }), 1);
-            const nextWeekEnd = addWeeks(endOfWeek(now, { locale: ptBR }), 1);
-            return matchDate >= nextWeekStart && matchDate <= nextWeekEnd;
-          case 'this-month':
-            return matchDate >= startOfMonth(now) && matchDate <= endOfMonth(now);
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filtro por busca de texto (título ou descrição)
-    if (filters.search.trim() !== '') {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(match =>
-        match.title.toLowerCase().includes(searchLower) ||
-        match.description?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    setFilteredMatches(filtered);
-  };
-
-  const joinMatch = async (matchId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('match_participants')
-        .insert({
-          match_id: matchId,
-          user_id: user.id,
-          status: 'pending',
-        });
-
-      if (error) throw error;
-
-      toast.success('Você entrou na partida!');
-      fetchMatches();
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao entrar na partida');
-    }
-  };
+  // Hook useMatchFilters já faz o fetch e filtros automaticamente
 
   const getSkillLevelLabel = (level: string) => {
     const labels: Record<string, string> = {
@@ -216,13 +80,7 @@ export default function Matches() {
     return labels[recurrence] || null;
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="container py-8">
@@ -240,10 +98,11 @@ export default function Matches() {
 
       {/* Filtros */}
       <div className="mb-6">
-        <MatchFiltersComponent
+        <MatchFiltersPanel
           filters={filters}
-          onFiltersChange={setFilters}
-          sports={sports}
+          onFilterChange={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
         />
       </div>
 
@@ -251,16 +110,29 @@ export default function Matches() {
       {matches.length > 0 && (
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
-            {filteredMatches.length === matches.length
-              ? `${matches.length} ${matches.length === 1 ? 'partida encontrada' : 'partidas encontradas'}`
-              : `${filteredMatches.length} de ${matches.length} ${matches.length === 1 ? 'partida' : 'partidas'}`
-            }
+            {matches.length} {matches.length === 1 ? 'partida encontrada' : 'partidas encontradas'}
           </p>
         </div>
       )}
 
       {/* Lista de Partidas */}
-      {filteredMatches.length === 0 ? (
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : matches.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
@@ -278,7 +150,7 @@ export default function Matches() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredMatches.map((match) => (
+          {matches.map((match) => (
             <Card
               key={match.id}
               className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"

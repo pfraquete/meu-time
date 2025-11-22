@@ -12,6 +12,7 @@ import Matches from "./pages/Matches";
 import CreateMatch from "./pages/CreateMatch";
 import MatchDetails from "./pages/MatchDetails";
 import Profile from "./pages/Profile";
+import Ranking from "./pages/Ranking";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
@@ -43,6 +44,11 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/ranking">
+        <ProtectedRoute>
+          <Ranking />
         </ProtectedRoute>
       </Route>
       <Route path="/404" component={NotFound} />
