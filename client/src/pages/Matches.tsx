@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Repeat } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addWeeks, startOfMonth, endOfMonth, addDays } from 'date-fns';
@@ -24,6 +24,7 @@ interface Match {
   skill_level: string;
   gender: string;
   status: string;
+  recurrence: string;
   sport: { id: string; name: string; icon: string };
   venue: { name: string; city: string; state: string } | null;
   organizer: { name: string };
@@ -207,6 +208,15 @@ export default function Matches() {
     return labels[gender] || gender;
   };
 
+  const getRecurrenceLabel = (recurrence: string) => {
+    const labels: Record<string, string> = {
+      weekly: 'Semanal',
+      biweekly: 'Quinzenal',
+      monthly: 'Mensal',
+    };
+    return labels[recurrence] || null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -314,6 +324,12 @@ export default function Matches() {
                   <span>{match.duration_minutes} minutos</span>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
+                  {match.recurrence && match.recurrence !== 'none' && (
+                    <Badge variant="default" className="gap-1">
+                      <Repeat className="h-3 w-3" />
+                      {getRecurrenceLabel(match.recurrence)}
+                    </Badge>
+                  )}
                   <Badge variant="secondary">
                     {getSkillLevelLabel(match.skill_level)}
                   </Badge>

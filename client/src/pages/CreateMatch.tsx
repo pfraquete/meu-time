@@ -7,8 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
+import { addWeeks, addMonths, format } from 'date-fns';
+import { Repeat, Info } from 'lucide-react';
 
 interface Sport {
   id: string;
@@ -23,6 +27,7 @@ export default function CreateMatch() {
   const { user } = useAuth();
   const [sports, setSports] = useState<Sport[]>([]);
   const [loading, setLoading] = useState(false);
+  const [enableRecurrence, setEnableRecurrence] = useState(false);
   const [formData, setFormData] = useState({
     sport_id: '',
     title: '',
@@ -34,6 +39,9 @@ export default function CreateMatch() {
     price: 0,
     skill_level: 'any',
     gender: 'mixed',
+    recurrence: 'none',
+    recurrence_end_date: '',
+    occurrences_count: 4,
   });
 
   useEffect(() => {
@@ -63,6 +71,42 @@ export default function CreateMatch() {
     }
   };
 
+  const generateRecurringMatches = () => {
+    if (!enableRecurrence || formData.recurrence === 'none') {
+      return [formData.match_date];
+    }
+
+    const dates: string[] = [];
+    const startDate = new Date(formData.match_date);
+    const { occurrences_count, recurrence } = formData;
+
+    for (let i = 0; i < occurrences_count; i++) {
+      let nextDate: Date;
+
+      if (i === 0) {
+        nextDate = startDate;
+      } else {
+        switch (recurrence) {
+          case 'weekly':
+            nextDate = addWeeks(startDate, i);
+            break;
+          case 'biweekly':
+            nextDate = addWeeks(startDate, i * 2);
+            break;
+          case 'monthly':
+            nextDate = addMonths(startDate, i);
+            break;
+          default:
+            nextDate = startDate;
+        }
+      }
+
+      dates.push(nextDate.toISOString());
+    }
+
+    return dates;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -70,17 +114,37 @@ export default function CreateMatch() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('matches').insert({
-        ...formData,
+      const matchDates = generateRecurringMatches();
+      const matches = matchDates.map(date => ({
+        sport_id: formData.sport_id,
+        title: formData.title,
+        description: formData.description,
+        match_date: date,
+        duration_minutes: formData.duration_minutes,
+        min_players: formData.min_players,
+        max_players: formData.max_players,
+        price: formData.price,
+        skill_level: formData.skill_level,
+        gender: formData.gender,
         organizer_id: user.id,
         status: 'open',
         current_players: 0,
-        recurrence: 'none',
-      });
+        recurrence: enableRecurrence ? formData.recurrence : 'none',
+        recurrence_end_date: enableRecurrence && matchDates.length > 0
+          ? matchDates[matchDates.length - 1]
+          : null,
+      }));
+
+      const { error } = await supabase.from('matches').insert(matches);
 
       if (error) throw error;
 
-      toast.success('Partida criada com sucesso!');
+      if (matches.length > 1) {
+        toast.success(`${matches.length} partidas criadas com sucesso!`);
+      } else {
+        toast.success('Partida criada com sucesso!');
+      }
+
       setLocation('/matches');
     } catch (error: any) {
       toast.error(error.message || 'Erro ao criar partida');
@@ -238,6 +302,82 @@ export default function CreateMatch() {
                 min={0}
                 step={0.01}
               />
+            </div>
+
+            {/* Seção de Recorrência */}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="enable-recurrence" className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4" />
+                    Partida Recorrente
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Crie múltiplas partidas com a mesma configuração
+                  </p>
+                </div>
+                <Switch
+                  id="enable-recurrence"
+                  checked={enableRecurrence}
+                  onCheckedChange={setEnableRecurrence}
+                />
+              </div>
+
+              {enableRecurrence && (
+                <div className="space-y-4 pl-4 border-l-2">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="recurrence">Frequência</Label>
+                      <Select
+                        value={formData.recurrence}
+                        onValueChange={(value) => setFormData({ ...formData, recurrence: value })}
+                      >
+                        <SelectTrigger id="recurrence">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">Semanal</SelectItem>
+                          <SelectItem value="biweekly">Quinzenal</SelectItem>
+                          <SelectItem value="monthly">Mensal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="occurrences">Número de Ocorrências</Label>
+                      <Input
+                        id="occurrences"
+                        type="number"
+                        value={formData.occurrences_count}
+                        onChange={(e) => setFormData({ ...formData, occurrences_count: parseInt(e.target.value) })}
+                        min={2}
+                        max={52}
+                      />
+                    </div>
+                  </div>
+
+                  {formData.match_date && formData.recurrence !== 'none' && (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Preview das datas:</strong>
+                        <ul className="mt-2 space-y-1 text-sm">
+                          {generateRecurringMatches().slice(0, 5).map((date, index) => (
+                            <li key={index}>
+                              {index + 1}. {format(new Date(date), "dd/MM/yyyy 'às' HH:mm")}
+                            </li>
+                          ))}
+                          {generateRecurringMatches().length > 5 && (
+                            <li className="text-muted-foreground">
+                              ... e mais {generateRecurringMatches().length - 5} partidas
+                            </li>
+                          )}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4">

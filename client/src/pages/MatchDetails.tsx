@@ -18,7 +18,8 @@ import {
   Mail,
   CheckCircle,
   XCircle,
-  Clock3
+  Clock3,
+  Repeat
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInHours, isPast } from 'date-fns';
@@ -38,6 +39,7 @@ interface Match {
   skill_level: string;
   gender: string;
   status: string;
+  recurrence: string;
   sport: {
     id: string;
     name: string;
@@ -301,6 +303,15 @@ export default function MatchDetails() {
     return labels[gender] || gender;
   };
 
+  const getRecurrenceLabel = (recurrence: string) => {
+    const labels: Record<string, string> = {
+      weekly: 'Semanal',
+      biweekly: 'Quinzenal',
+      monthly: 'Mensal',
+    };
+    return labels[recurrence] || null;
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -479,6 +490,12 @@ export default function MatchDetails() {
               <div>
                 <h3 className="font-semibold mb-3">Configurações</h3>
                 <div className="flex flex-wrap gap-2">
+                  {matchData.recurrence && matchData.recurrence !== 'none' && (
+                    <Badge variant="default" className="gap-1">
+                      <Repeat className="h-3 w-3" />
+                      Série {getRecurrenceLabel(matchData.recurrence)}
+                    </Badge>
+                  )}
                   <Badge variant="secondary">
                     {getSkillLevelLabel(matchData.skill_level)}
                   </Badge>
