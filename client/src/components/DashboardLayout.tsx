@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, Trophy, Repeat, Target } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,8 +29,12 @@ import { Button } from "./ui/button";
 import NotificationBell from "./NotificationBell";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Início", path: "/" },
+  { icon: Calendar, label: "Partidas", path: "/matches" },
+  { icon: Repeat, label: "Minhas Séries", path: "/series" },
+  { icon: Trophy, label: "Ranking", path: "/ranking" },
+  { icon: Target, label: "Desafios", path: "/challenges" },
+  { icon: Users, label: "Perfil", path: "/profile" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

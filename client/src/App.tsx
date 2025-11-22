@@ -13,6 +13,9 @@ import CreateMatch from "./pages/CreateMatch";
 import MatchDetails from "./pages/MatchDetails";
 import Profile from "./pages/Profile";
 import Ranking from "./pages/Ranking";
+import MySeries from "./pages/MySeries";
+import Challenges from "./pages/Challenges";
+import PlayerProfile from "./pages/PlayerProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
@@ -49,6 +52,21 @@ function Router() {
       <Route path="/ranking">
         <ProtectedRoute>
           <Ranking />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/series">
+        <ProtectedRoute>
+          <MySeries />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/challenges">
+        <ProtectedRoute>
+          <Challenges />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/players/:id">
+        <ProtectedRoute>
+          <PlayerProfile />
         </ProtectedRoute>
       </Route>
       <Route path="/404" component={NotFound} />

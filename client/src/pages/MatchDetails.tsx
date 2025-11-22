@@ -25,6 +25,8 @@ import { toast } from 'sonner';
 import { format, differenceInHours, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import PresenceConfirmation from '@/components/PresenceConfirmation';
+import WaitlistCard from '@/components/WaitlistCard';
 
 interface Match {
   id: string;
@@ -750,6 +752,21 @@ export default function MatchDetails() {
               </CardContent>
             </Card>
           )}
+
+          {/* Confirmação de Presença */}
+          {isParticipant && userParticipation && userParticipation.status !== 'waitlist' && (
+            <PresenceConfirmation
+              matchId={matchData.id}
+              matchDate={matchData.match_date}
+              participantId={userParticipation.id}
+              confirmedPresence={userParticipation.confirmed_presence || false}
+              confirmationDate={userParticipation.confirmation_date}
+              onConfirm={fetchMatchDetails}
+            />
+          )}
+
+          {/* Lista de Espera */}
+          <WaitlistCard matchId={matchData.id} onUpdate={fetchMatchDetails} />
 
           {/* Card de informações adicionais */}
           <Card>
