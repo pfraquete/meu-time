@@ -9,7 +9,8 @@ import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addWeeks, startOfMonth, endOfMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import MatchFiltersComponent, { MatchFilters as MatchFiltersType } from '@/components/MatchFilters';
+import MatchFiltersPanel from '@/components/MatchFiltersPanel';
+import { useMatchFilters } from '@/hooks/useMatchFilters';
 
 interface Match {
   id: string;
@@ -39,17 +40,15 @@ interface Sport {
 export default function Matches() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [filteredMatches, setFilteredMatches] = useState<Match[]>([]);
-  const [sports, setSports] = useState<Sport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<MatchFiltersType>({
-    search: '',
-    sportId: 'all',
-    skillLevel: 'all',
-    priceRange: 'all',
-    dateRange: 'all',
-  });
+  const {
+    filters,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+    matches,
+    isLoading,
+    error,
+  } = useMatchFilters();
 
   useEffect(() => {
     fetchSports();
