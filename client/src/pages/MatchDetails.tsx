@@ -21,8 +21,9 @@ import {
   Clock3
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, differenceInHours, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Match {
   id: string;
@@ -64,6 +65,7 @@ interface Participant {
   id: string;
   status: string;
   joined_at: string;
+  confirmed_at: string | null;
   user: {
     id: string;
     name: string;
@@ -114,6 +116,7 @@ export default function MatchDetails() {
           id,
           status,
           joined_at,
+          confirmed_at,
           user:profiles!user_id(id, name, avatar_url)
         `)
         .eq('match_id', matchId)
@@ -175,6 +178,51 @@ export default function MatchDetails() {
     } catch (error: any) {
       toast.error(error.message || 'Erro ao sair da partida');
     }
+  };
+
+  const confirmPresence = async () => {
+    if (!user || !matchData || !userParticipation) return;
+
+    try {
+      const { error } = await supabase
+        .from('match_participants')
+        .update({
+          status: 'confirmed',
+          confirmed_at: new Date().toISOString(),
+        })
+        .eq('id', userParticipation.id);
+
+      if (error) throw error;
+
+      toast.success('Presença confirmada!');
+      fetchMatchDetails(matchData.id);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao confirmar presença');
+    }
+  };
+
+  const needsConfirmation = () => {
+    if (!matchData || !userParticipation) return false;
+
+    const matchDate = new Date(matchData.match_date);
+    const hoursUntilMatch = differenceInHours(matchDate, new Date());
+
+    // Precisa confirmar se:
+    // 1. Faltam menos de 48h para a partida
+    // 2. Ainda não confirmou
+    // 3. Status é 'pending'
+    return (
+      hoursUntilMatch <= 48 &&
+      hoursUntilMatch > 0 &&
+      !userParticipation.confirmed_at &&
+      userParticipation.status === 'pending'
+    );
+  };
+
+  const confirmationDeadlinePassed = () => {
+    if (!matchData) return false;
+    const matchDate = new Date(matchData.match_date);
+    return isPast(matchDate);
   };
 
   const getSkillLevelLabel = (level: string) => {
@@ -262,6 +310,19 @@ export default function MatchDetails() {
         <ArrowLeft className="h-4 w-4 mr-2" />
         Voltar para partidas
       </Button>
+
+      {/* Alert de confirmação de presença */}
+      {needsConfirmation() && (
+        <Alert className="mb-6 border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20">
+          <Clock3 className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+          <AlertTitle className="text-yellow-800 dark:text-yellow-400">
+            Confirmação de Presença Necessária
+          </AlertTitle>
+          <AlertDescription className="text-yellow-700 dark:text-yellow-500">
+            Faltam menos de 48 horas para a partida. Por favor, confirme sua presença para garantir sua vaga.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Coluna principal - Informações da partida */}
@@ -487,11 +548,29 @@ export default function MatchDetails() {
                         <span className="font-medium">Você está participando!</span>
                       </div>
                       {userParticipation && (
-                        <p className="text-sm text-green-600 dark:text-green-500 mt-1">
-                          Status: {getStatusLabel(userParticipation.status)}
-                        </p>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm text-green-600 dark:text-green-500">
+                            Status: {getStatusLabel(userParticipation.status)}
+                          </p>
+                          {userParticipation.confirmed_at && (
+                            <p className="text-xs text-green-600/80 dark:text-green-500/80">
+                              Confirmado em {format(new Date(userParticipation.confirmed_at), "dd/MM/yyyy 'às' HH:mm")}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
+
+                    {needsConfirmation() && (
+                      <Button
+                        className="w-full"
+                        onClick={confirmPresence}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Confirmar Presença
+                      </Button>
+                    )}
+
                     <Button
                       variant="destructive"
                       className="w-full"
