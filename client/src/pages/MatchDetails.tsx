@@ -174,9 +174,66 @@ export default function MatchDetails() {
       if (error) throw error;
 
       toast.success('Você saiu da partida');
+
+      // Se saiu e tinha vaga, promover primeiro da lista de espera
+      if (userParticipation.status !== 'waitlist') {
+        await promoteFromWaitlist();
+      }
+
       fetchMatchDetails(matchData.id);
     } catch (error: any) {
       toast.error(error.message || 'Erro ao sair da partida');
+    }
+  };
+
+  const joinWaitlist = async () => {
+    if (!user || !matchData) return;
+
+    try {
+      const { error } = await supabase
+        .from('match_participants')
+        .insert({
+          match_id: matchData.id,
+          user_id: user.id,
+          status: 'waitlist',
+        });
+
+      if (error) throw error;
+
+      toast.success('Você entrou na lista de espera!');
+      fetchMatchDetails(matchData.id);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao entrar na lista de espera');
+    }
+  };
+
+  const promoteFromWaitlist = async () => {
+    if (!matchData) return;
+
+    try {
+      // Buscar primeiro da lista de espera
+      const { data: waitlistData, error: waitlistError } = await supabase
+        .from('match_participants')
+        .select('id')
+        .eq('match_id', matchData.id)
+        .eq('status', 'waitlist')
+        .order('joined_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (waitlistError || !waitlistData) return;
+
+      // Promover para pending
+      const { error: updateError } = await supabase
+        .from('match_participants')
+        .update({ status: 'pending' })
+        .eq('id', waitlistData.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Participante promovido da lista de espera!');
+    } catch (error: any) {
+      console.error('Erro ao promover da lista de espera:', error);
     }
   };
 
@@ -260,9 +317,17 @@ export default function MatchDetails() {
       pending: 'Pendente',
       confirmed: 'Confirmado',
       cancelled: 'Cancelado',
+      waitlist: 'Lista de Espera',
+      declined: 'Recusado',
+      attended: 'Compareceu',
+      no_show: 'Não Compareceu',
     };
     return labels[status] || status;
   };
+
+  // Separar participantes ativos e lista de espera
+  const activeParticipants = participants.filter(p => p.status !== 'waitlist');
+  const waitlistParticipants = participants.filter(p => p.status === 'waitlist');
 
   const getInitials = (name: string) => {
     return name
@@ -449,20 +514,20 @@ export default function MatchDetails() {
           <Card>
             <CardHeader>
               <CardTitle>
-                Participantes ({participants.length}/{matchData.max_players})
+                Participantes ({activeParticipants.length}/{matchData.max_players})
               </CardTitle>
               <CardDescription>
                 Jogadores confirmados e pendentes para esta partida
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {participants.length === 0 ? (
+              {activeParticipants.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   Nenhum participante ainda. Seja o primeiro!
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {participants.map((participant) => (
+                  {activeParticipants.map((participant) => (
                     <div
                       key={participant.id}
                       className="flex items-center justify-between p-3 rounded-lg border"
@@ -491,6 +556,51 @@ export default function MatchDetails() {
               )}
             </CardContent>
           </Card>
+
+          {/* Lista de espera */}
+          {waitlistParticipants.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Lista de Espera ({waitlistParticipants.length})
+                </CardTitle>
+                <CardDescription>
+                  Jogadores aguardando vaga na partida
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {waitlistParticipants.map((participant, index) => (
+                    <div
+                      key={participant.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300 font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <Avatar>
+                          <AvatarImage src={participant.user.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {getInitials(participant.user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{participant.user.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Entrou em {format(new Date(participant.joined_at), "dd/MM/yyyy 'às' HH:mm")}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-orange-100 dark:bg-orange-900/20">
+                        Posição #{index + 1}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Coluna lateral - Organizador e ações */}
@@ -542,26 +652,38 @@ export default function MatchDetails() {
               <CardContent className="space-y-3">
                 {isParticipant ? (
                   <>
-                    <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                        <CheckCircle className="h-5 w-5" />
-                        <span className="font-medium">Você está participando!</span>
-                      </div>
-                      {userParticipation && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-sm text-green-600 dark:text-green-500">
-                            Status: {getStatusLabel(userParticipation.status)}
-                          </p>
-                          {userParticipation.confirmed_at && (
-                            <p className="text-xs text-green-600/80 dark:text-green-500/80">
-                              Confirmado em {format(new Date(userParticipation.confirmed_at), "dd/MM/yyyy 'às' HH:mm")}
-                            </p>
-                          )}
+                    {userParticipation?.status === 'waitlist' ? (
+                      <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                          <Clock3 className="h-5 w-5" />
+                          <span className="font-medium">Você está na lista de espera!</span>
                         </div>
-                      )}
-                    </div>
+                        <p className="text-sm text-orange-600 dark:text-orange-500 mt-2">
+                          Posição: #{waitlistParticipants.findIndex(p => p.user.id === user?.id) + 1}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                          <CheckCircle className="h-5 w-5" />
+                          <span className="font-medium">Você está participando!</span>
+                        </div>
+                        {userParticipation && (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-sm text-green-600 dark:text-green-500">
+                              Status: {getStatusLabel(userParticipation.status)}
+                            </p>
+                            {userParticipation.confirmed_at && (
+                              <p className="text-xs text-green-600/80 dark:text-green-500/80">
+                                Confirmado em {format(new Date(userParticipation.confirmed_at), "dd/MM/yyyy 'às' HH:mm")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                    {needsConfirmation() && (
+                    {needsConfirmation() && userParticipation?.status !== 'waitlist' && (
                       <Button
                         className="w-full"
                         onClick={confirmPresence}
@@ -576,22 +698,36 @@ export default function MatchDetails() {
                       className="w-full"
                       onClick={leaveMatch}
                     >
-                      Sair da partida
+                      {userParticipation?.status === 'waitlist' ? 'Sair da Lista de Espera' : 'Sair da partida'}
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    className="w-full"
-                    onClick={joinMatch}
-                    disabled={isFull || matchData.status !== 'open'}
-                  >
-                    {isFull ? 'Partida Cheia' : 'Participar da Partida'}
-                  </Button>
+                  <>
+                    {isFull ? (
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={joinWaitlist}
+                        disabled={matchData.status !== 'open'}
+                      >
+                        <Clock3 className="h-4 w-4 mr-2" />
+                        Entrar na Lista de Espera
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        onClick={joinMatch}
+                        disabled={matchData.status !== 'open'}
+                      >
+                        Participar da Partida
+                      </Button>
+                    )}
+                  </>
                 )}
 
-                {isFull && !isParticipant && (
+                {isFull && !isParticipant && waitlistParticipants.length > 0 && (
                   <p className="text-sm text-center text-muted-foreground">
-                    Esta partida está cheia. Você pode entrar na lista de espera (em breve).
+                    {waitlistParticipants.length} {waitlistParticipants.length === 1 ? 'pessoa' : 'pessoas'} na lista de espera
                   </p>
                 )}
               </CardContent>
