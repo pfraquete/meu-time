@@ -28,16 +28,16 @@
 - [x] Implementar proteção de rotas
 
 ## Perfil do Jogador
-- [ ] Criar página de perfil
-- [ ] Implementar edição de perfil
+- [x] Criar página de perfil
+- [x] Implementar edição de perfil
 - [ ] Upload de foto de perfil (Supabase Storage)
-- [ ] Exibir estatísticas do jogador
+- [x] Exibir estatísticas do jogador
 - [ ] Sistema de badges/conquistas
 - [ ] Histórico de partidas
 
 ## Sistema de Partidas
-- [ ] Criar página de listagem de partidas
-- [ ] Implementar criação de partidas
+- [x] Criar página de listagem de partidas
+- [x] Implementar criação de partidas
 - [ ] Sistema de recorrência (única, semanal, quinzenal, mensal)
 - [ ] Configurações avançadas (nível, idade, gênero)
 - [ ] Lista de espera automática
@@ -83,10 +83,10 @@
 - [ ] Sistema de ranking
 
 ## Interface do Usuário
-- [ ] Design system e paleta de cores
-- [ ] Landing page
-- [ ] Dashboard do usuário
-- [ ] Navegação responsiva
+- [x] Design system e paleta de cores
+- [x] Landing page
+- [x] Dashboard do usuário
+- [x] Navegação responsiva
 - [ ] Componentes reutilizáveis
 - [ ] Estados de loading e erro
 - [ ] Feedback visual (toasts, modals)

@@ -2,8 +2,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { APP_LOGO, APP_TITLE } from "@/const";
+import { useLocation } from "wouter";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   const { user, profile, loading, isAuthenticated, signOut } = useAuth();
 
   if (loading) {
@@ -41,13 +43,13 @@ export default function Home() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Button variant="default" className="h-24">
+            <Button variant="default" className="h-24" onClick={() => setLocation('/matches/create')}>
               Criar Partida
             </Button>
-            <Button variant="outline" className="h-24">
+            <Button variant="outline" className="h-24" onClick={() => setLocation('/matches')}>
               Buscar Partidas
             </Button>
-            <Button variant="outline" className="h-24">
+            <Button variant="outline" className="h-24" onClick={() => setLocation('/profile')}>
               Meu Perfil
             </Button>
           </div>

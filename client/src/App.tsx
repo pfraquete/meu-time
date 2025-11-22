@@ -8,6 +8,9 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Matches from "./pages/Matches";
+import CreateMatch from "./pages/CreateMatch";
+import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
@@ -19,6 +22,21 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           <Home />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/matches">
+        <ProtectedRoute>
+          <Matches />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/matches/create">
+        <ProtectedRoute>
+          <CreateMatch />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute>
+          <Profile />
         </ProtectedRoute>
       </Route>
       <Route path="/404" component={NotFound} />
