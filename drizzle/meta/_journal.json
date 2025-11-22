@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1763822382174,
+      "tag": "0000_acoustic_radioactive_man",
+      "breakpoints": true
+    }
+  ]
 }
