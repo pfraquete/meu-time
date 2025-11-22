@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { User, Trophy, Calendar } from 'lucide-react';
+import AvatarUpload from '@/components/AvatarUpload';
 
 interface PlayerStats {
   sport_name: string;
@@ -20,7 +22,7 @@ interface PlayerStats {
 }
 
 export default function Profile() {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [formData, setFormData] = useState({
@@ -106,7 +108,18 @@ export default function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Avatar Upload */}
+                <div className="flex justify-center">
+                  <AvatarUpload
+                    avatarUrl={profile?.avatar_url || null}
+                    userName={profile?.name || user?.email || 'Usuário'}
+                    onUploadComplete={refreshProfile}
+                  />
+                </div>
+
+                <Separator />
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input

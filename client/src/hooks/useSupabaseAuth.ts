@@ -145,6 +145,11 @@ export function useSupabaseAuth() {
     }));
   };
 
+  const refreshProfile = async () => {
+    if (!authState.user) return;
+    await fetchProfile(authState.user.id);
+  };
+
   return {
     ...authState,
     signUp,
@@ -152,5 +157,6 @@ export function useSupabaseAuth() {
     signOut,
     resetPassword,
     updateProfile,
+    refreshProfile,
   };
 }
