@@ -138,7 +138,11 @@ export default function Matches() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {matches.map((match) => (
-            <Card key={match.id} className="flex flex-col">
+            <Card
+              key={match.id}
+              className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setLocation(`/matches/${match.id}`)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
@@ -192,7 +196,10 @@ export default function Matches() {
               <CardFooter>
                 <Button
                   className="w-full"
-                  onClick={() => joinMatch(match.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    joinMatch(match.id);
+                  }}
                   disabled={match.current_players >= match.max_players}
                 >
                   {match.current_players >= match.max_players

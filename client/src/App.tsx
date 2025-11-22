@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Matches from "./pages/Matches";
 import CreateMatch from "./pages/CreateMatch";
+import MatchDetails from "./pages/MatchDetails";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -32,6 +33,11 @@ function Router() {
       <Route path="/matches/create">
         <ProtectedRoute>
           <CreateMatch />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/matches/:id">
+        <ProtectedRoute>
+          <MatchDetails />
         </ProtectedRoute>
       </Route>
       <Route path="/profile">
