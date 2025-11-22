@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addWeeks, startOfMonth, endOfMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import MatchFiltersComponent, { MatchFilters as MatchFiltersType } from '@/components/MatchFilters';
 
 interface Match {
   id: string;
@@ -23,20 +24,54 @@ interface Match {
   skill_level: string;
   gender: string;
   status: string;
-  sport: { name: string; icon: string };
+  sport: { id: string; name: string; icon: string };
   venue: { name: string; city: string; state: string } | null;
   organizer: { name: string };
+}
+
+interface Sport {
+  id: string;
+  name: string;
+  icon: string;
 }
 
 export default function Matches() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
+  const [filteredMatches, setFilteredMatches] = useState<Match[]>([]);
+  const [sports, setSports] = useState<Sport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<MatchFiltersType>({
+    search: '',
+    sportId: 'all',
+    skillLevel: 'all',
+    priceRange: 'all',
+    dateRange: 'all',
+  });
 
   useEffect(() => {
+    fetchSports();
     fetchMatches();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [matches, filters]);
+
+  const fetchSports = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sports')
+        .select('id, name, icon')
+        .order('name');
+
+      if (error) throw error;
+      setSports(data || []);
+    } catch (error: any) {
+      console.error('Erro ao carregar esportes:', error);
+    }
+  };
 
   const fetchMatches = async () => {
     try {
@@ -44,7 +79,7 @@ export default function Matches() {
         .from('matches')
         .select(`
           *,
-          sport:sports(name, icon),
+          sport:sports(id, name, icon),
           venue:venues(name, city, state),
           organizer:profiles!organizer_id(name)
         `)
@@ -60,6 +95,76 @@ export default function Matches() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...matches];
+
+    // Filtro por esporte
+    if (filters.sportId !== 'all') {
+      filtered = filtered.filter(match => match.sport.id === filters.sportId);
+    }
+
+    // Filtro por nível de habilidade
+    if (filters.skillLevel !== 'all') {
+      filtered = filtered.filter(match => match.skill_level === filters.skillLevel);
+    }
+
+    // Filtro por preço
+    if (filters.priceRange !== 'all') {
+      filtered = filtered.filter(match => {
+        const price = match.price;
+        switch (filters.priceRange) {
+          case 'free':
+            return price === 0;
+          case '0-50':
+            return price > 0 && price <= 50;
+          case '50-100':
+            return price > 50 && price <= 100;
+          case '100+':
+            return price > 100;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filtro por data
+    if (filters.dateRange !== 'all') {
+      const now = new Date();
+      filtered = filtered.filter(match => {
+        const matchDate = new Date(match.match_date);
+        switch (filters.dateRange) {
+          case 'today':
+            return matchDate >= startOfDay(now) && matchDate <= endOfDay(now);
+          case 'tomorrow':
+            const tomorrow = addDays(now, 1);
+            return matchDate >= startOfDay(tomorrow) && matchDate <= endOfDay(tomorrow);
+          case 'this-week':
+            return matchDate >= startOfWeek(now, { locale: ptBR }) &&
+                   matchDate <= endOfWeek(now, { locale: ptBR });
+          case 'next-week':
+            const nextWeekStart = addWeeks(startOfWeek(now, { locale: ptBR }), 1);
+            const nextWeekEnd = addWeeks(endOfWeek(now, { locale: ptBR }), 1);
+            return matchDate >= nextWeekStart && matchDate <= nextWeekEnd;
+          case 'this-month':
+            return matchDate >= startOfMonth(now) && matchDate <= endOfMonth(now);
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filtro por busca de texto (título ou descrição)
+    if (filters.search.trim() !== '') {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(match =>
+        match.title.toLowerCase().includes(searchLower) ||
+        match.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setFilteredMatches(filtered);
   };
 
   const joinMatch = async (matchId: string) => {
@@ -124,20 +229,47 @@ export default function Matches() {
         </Button>
       </div>
 
-      {matches.length === 0 ? (
+      {/* Filtros */}
+      <div className="mb-6">
+        <MatchFiltersComponent
+          filters={filters}
+          onFiltersChange={setFilters}
+          sports={sports}
+        />
+      </div>
+
+      {/* Contador de Resultados */}
+      {matches.length > 0 && (
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            {filteredMatches.length === matches.length
+              ? `${matches.length} ${matches.length === 1 ? 'partida encontrada' : 'partidas encontradas'}`
+              : `${filteredMatches.length} de ${matches.length} ${matches.length === 1 ? 'partida' : 'partidas'}`
+            }
+          </p>
+        </div>
+      )}
+
+      {/* Lista de Partidas */}
+      {filteredMatches.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              Nenhuma partida disponível no momento.
+              {matches.length === 0
+                ? 'Nenhuma partida disponível no momento.'
+                : 'Nenhuma partida encontrada com os filtros selecionados.'
+              }
             </p>
-            <Button className="mt-4" onClick={() => setLocation('/matches/create')}>
-              Criar a primeira partida
-            </Button>
+            {matches.length === 0 && (
+              <Button className="mt-4" onClick={() => setLocation('/matches/create')}>
+                Criar a primeira partida
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {matches.map((match) => (
+          {filteredMatches.map((match) => (
             <Card
               key={match.id}
               className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
