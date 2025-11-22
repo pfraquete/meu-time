@@ -105,8 +105,8 @@
 - [ ] Criar checkpoint final
 
 ## Integração OpenAI
-- [ ] Instalar dependência openai
-- [ ] Configurar variável de ambiente OPENAI_API_KEY
-- [ ] Criar script de análise de código com GPT-4
+- [x] Instalar dependência openai
+- [x] Configurar variável de ambiente OPENAI_API_KEY
+- [x] Criar script de análise de código com GPT-4
 - [ ] Executar análise completa do projeto
 - [ ] Implementar correções sugeridas pela IA
